@@ -73,26 +73,47 @@ router.post('/register', upload.array('photos', 5), async (req, res) => {
   }
 });
 
-
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body; 
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
-  }   
   try {
-    const user = await User.findOne({ email }); // use `findOne` instead of `find`
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const { email, password } = req.body;
+
+    // 1. Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
     }
+
+    // 2. Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // 3. Compare password
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Incorrect password.' });
     }
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.status(200).json({ message: 'Login successful', token });
+
+    // 4. Generate JWT
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // 5. Respond with token and user info
+      res.json({
+    success: true,
+    token,
+    message: 'Login successful',
+    userId: user._id,
+    fullName: user.fullName,
+    profileImage: user.profileImage, // e.g. 'assets/images/user1.jpg'
+
+  });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error. Try again.' });
+    res.status(500).json({ message: 'Internal server error. Please try again later.' });
   }
 });
 

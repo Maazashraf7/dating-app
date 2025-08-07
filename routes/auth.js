@@ -100,6 +100,7 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
+console.log("✅ Login successful, sending user:", user.fullName);
 
     // 5. Respond with token and user info
       res.json({
@@ -107,9 +108,10 @@ router.post('/login', async (req, res) => {
     token,
     message: 'Login successful',
     userId: user._id,
-    fullName: user.fullName,
-    profileImage: user.profileImage, // e.g. 'assets/images/user1.jpg'
-
+    user: {
+      fullName: user.fullName,
+      profileImage: user.profileImage, // e.g. 'assets/images/user1.jpg'
+    },
   });
   } catch (error) {
     console.error('Login error:', error);

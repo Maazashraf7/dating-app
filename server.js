@@ -8,7 +8,7 @@ const path = require('path');
 const app = express();
 
 app.use(cors({
-  origin: "http://127.0.0.1:5502", // allow your local frontend
+  origin: true, // allow your local frontend
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]

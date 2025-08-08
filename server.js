@@ -5,10 +5,14 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const path = require('path');
 
-dotenv.config();
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "http://127.0.0.1:5502", // allow your local frontend
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 app.use('/api/auth', authRoutes); // Mount routes
 

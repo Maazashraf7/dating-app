@@ -9,7 +9,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/users', userRoutes); // Mount routes
+app.use('/api/auth', userRoutes); // Mount routes
 
 const PORT = process.env.PORT || 5000;
 

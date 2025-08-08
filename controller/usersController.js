@@ -110,47 +110,50 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: 'Internal server error. Please try again later.' });
   }
 };
-
-// Get Profile
-exports.getProfile = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];   
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
+// @desc   Get logged-in user's profile
+// @route  GET /api/user/profile
+exports.getUserProfile = async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.status(200).json({ user });
+    const user = await User.findById(req.user.id).select('-passwordHash -__v');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json(user);
   } catch (error) {
-    console.error('Profile retrieval error:', error);
-    res.status(500).json({ message: 'Server error. Try again.' });
+    res.status(500).json({ message: 'Server error', error });
   }
 };
 
-// Update Profile
-exports.updateProfile = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];   
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  } 
+// @desc   Update logged-in user's profile
+// @route  PUT /api/user/profile
+exports.updateUserProfile = async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId;
-    const updates = req.body;
+    const {
+      fullName,
+      dob,
+      age,
+      gender,
+      location,
+      bio,
+    } = req.body;
 
-    if (req.files && req.files.length > 0) {
-      updates.photos = req.files.map(file => file.path);
-    } else {
-      updates.photos = [];
-    }
+    const updatedData = {
+      ...(fullName && { fullName }),
+      ...(dob && { dob }),
+      ...(age && { age }),
+      ...(gender && { gender }),
+      ...(location && { location }),
+      ...(bio && { bio }),
+      updatedAt: Date.now(),
+    };
 
-    await User.findByIdAndUpdate(userId, updates, { new: true });
-    res.status(200).json({ message: 'Profile updated successfully' });
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updatedData },
+      { new: true }
+    ).select('-passwordHash -__v');
+
+    res.status(200).json({ message: 'Profile updated successfully', user });
   } catch (error) {
-    console.error('Profile update error:', error);
-    res.status(500).json({ message: 'Server error. Try again.' });
+    res.status(500).json({ message: 'Error updating profile', error });
   }
 };

@@ -6,7 +6,7 @@ const userController = require('../controller/usersController');
 
 router.post('/register', upload.array('photos', 5), userController.registerUser);
 router.post('/login', userController.loginUser);
-router.get('/profile', userController.getProfile);
-router.put('/profile', upload.array('photos', 5), userController.updateProfile);
+router.get('/profile', auth, userController.getUserProfile);
+router.put('/profile', auth, upload.array('photos', 5), userController.updateUserProfile);
 
 module.exports = router;

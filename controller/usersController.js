@@ -114,12 +114,14 @@ exports.loginUser = async (req, res) => {
 // @route  GET /api/user/profile
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-passwordHash -__v');
+    // Accept userId from query, body, or params for flexibility
+    const userId = req.query.id || req.body.id || req.params.id;
+    if (!userId) return res.status(400).json({ message: 'User ID required' });
+    const user = await User.findById(userId).select('-passwordHash -__v');
     if (!user) return res.status(404).json({ message: 'User not found' });
-
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -127,6 +129,9 @@ exports.getUserProfile = async (req, res) => {
 // @route  PUT /api/user/profile
 exports.updateUserProfile = async (req, res) => {
   try {
+    // Use req.user.id if available, else fallback to req.body.id or req.query.id
+    const userId = req.user?.id || req.body.id || req.query.id;
+    if (!userId) return res.status(400).json({ message: 'User ID required' });
     const {
       fullName,
       dob,
@@ -147,7 +152,7 @@ exports.updateUserProfile = async (req, res) => {
     };
 
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      userId,
       { $set: updatedData },
       { new: true }
     ).select('-passwordHash -__v');

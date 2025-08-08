@@ -9,7 +9,8 @@ const userController = require('../controller/usersController');
 // Routes
 router.post('/register', upload.array('photos', 5), userController.registerUser);
 router.post('/login', userController.loginUser);
+// Removed auth and upload middleware from profile routes
 router.get('/profile', userController.getUserProfile);
-router.put('/profile', upload.array('photos', 5), userController.updateUserProfile);
+router.put('/profile', userController.updateUserProfile);
 
 module.exports = router;

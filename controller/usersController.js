@@ -18,7 +18,7 @@ exports.registerUser = async (req, res) => {
       bio,
       hobbies
     } = req.body;
-
+const profileImage = req.files ? req.file.filename:  ''; // Get the first uploaded file path
     const fullName = rawFullName || `${req.body.firstName || ''} ${req.body.lastName || ''}`.trim();
 
     if (!username || !email || !password || !fullName || !dob || !age || !gender) {
@@ -33,12 +33,10 @@ exports.registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const photoPaths = req.files?.map(file => file.path) || [];
-
     const newUser = new User({
       username,
       email,
-      passwordHash,
+      password:passwordHash,
       fullName,
       dob,
       age,
@@ -46,19 +44,14 @@ exports.registerUser = async (req, res) => {
       location,
       bio,
       hobbies,
-      photos: photoPaths
+      photos: profileImage
     });
 
     await newUser.save();
 
     res.status(201).json({
       message: 'User registered successfully',
-      user: {
-        _id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        image: photoPaths[0] || ''
-      }
+      data: newUser
     });
 
   } catch (error) {

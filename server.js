@@ -7,14 +7,21 @@ const path = require('path');
 
 const app = express();
 
+// Enable CORS for frontend communication
 app.use(cors({
-  origin: true, // allow your local frontend
+  origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
 app.use(express.json());
-app.use('/api/auth', authRoutes); // Mount routes
+
+// ✅ Serve static files from "uploads" directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Mount routes
+app.use('/api/auth', authRoutes);
 
 const PORT = process.env.PORT || 5000;
 

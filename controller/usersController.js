@@ -1,50 +1,87 @@
 // controllers/userController.js
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const User = require('../model/user');
+const User = require('../model/User');
 
+// ==========================
 // Register User
-exports.registerUser = async (req, res) => {
+// ==========================
+exports.register = async (req, res) => {
   try {
     const {
-      username,
+      phoneNo,
       email,
       password,
-      fullName: rawFullName,
+      firstName,
+      lastName,
       dob,
       age,
       gender,
-      location,
+      street,
+      city,
+      state,
+      country,
+      postalCode,
       bio,
-      hobbies
+      hobbies,
+      status
     } = req.body;
-const profileImage = req.files ? req.file.filename:  ''; // Get the first uploaded file path
-    const fullName = rawFullName || `${req.body.firstName || ''} ${req.body.lastName || ''}`.trim();
 
-    if (!username || !email || !password || !fullName || !dob || !age || !gender) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
+    const profileImage = req.file?.filename || '';
 
+    // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({ message: 'Email already registered' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
 
+    // Location object
+    const location = {
+      street: street?.trim() || '',
+      city: city?.trim() || '',
+      state: state?.trim() || '',
+      country: country?.trim() || '',
+      postalCode: postalCode?.trim() || ''
+    };
+
+    // Convert hobbies string to array
+    const hobbiesArray = Array.isArray(hobbies)
+      ? hobbies.map(h => h.trim())
+      : hobbies
+        ? hobbies.split(',').map(h => h.trim())
+        : [];
+
+    // Uploaded images
+    const files = req.files || [];
+    const photoPaths = files.map(file => file.filename);
+
+    // Create new user according to schema
     const newUser = new User({
-      username,
-      email,
-      password:passwordHash,
-      fullName,
+      Name: {
+        firstName: firstName?.trim() || '',
+        lastName: lastName?.trim() || ''
+      },
+      phoneNo: phoneNo?.trim() || '',
+      email: email?.trim().toLowerCase(),
+      password: passwordHash,
       dob,
       age,
       gender,
-      location,
+      location:{
+        street: street?.trim() || '',
+        city: city?.trim() || '',
+        state: state?.trim() || '',
+        country: country?.trim() || '',
+        postalCode: postalCode?.trim() || ''
+      },
       bio,
-      hobbies,
-      photos: profileImage
+      hobbies: hobbiesArray,
+      profilePic: photoPaths[0] || '',
+      photos: photoPaths,
+      status: status || 'Active'
     });
 
     await newUser.save();
@@ -60,7 +97,10 @@ const profileImage = req.files ? req.file.filename:  ''; // Get the first upload
   }
 };
 
+
+// ==========================
 // Login User
+// ==========================
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -74,28 +114,26 @@ exports.loginUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Incorrect password.' });
     }
 
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { id: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    console.log("✅ Login successful, sending user:", user.fullName);
+    console.log("✅ Login successful:", user.fullName);
+    console.log("🔑 JWT Token:", token);
+    console.log("profilePic:", user.profilePic);
 
     res.json({
       success: true,
       token,
       message: 'Login successful',
-      userId: user._id,
-      user: {
-        fullName: user.fullName,
-        profileImage: user.profileImage,
-      },
+      user
     });
 
   } catch (error) {
@@ -103,35 +141,62 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: 'Internal server error. Please try again later.' });
   }
 };
-// @desc   Get logged-in user's profile
-// @route  GET /api/user/profile
+
+// ==========================
+// Get Logged-in User Profile
+// ==========================
 exports.getUserProfile = async (req, res) => {
   try {
-    // Accept userId from query, body, or params for flexibility
-    const userId = req.query.id || req.body.id || req.params.id;
-    if (!userId) return res.status(400).json({ message: 'User ID required' });
-    const user = await User.findById(userId).select('-passwordHash -__v');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user);
+    const userId =
+      req.user?.id || req.user?._id || req.body.id || req.query.id || req.params.id;
+
+    if (!userId) {
+      console.warn("❌ No user ID found");
+      return res.status(401).json({ message: "Unauthorized: No user ID" });
+    }
+
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      console.warn("❌ User not found for ID", userId);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User profile fetched successfully",
+      user,
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("❌ getUserProfile error", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
-// @desc   Update logged-in user's profile
-// @route  PUT /api/user/profile
+// ==========================
+// Update User Profile
+// ==========================
 exports.updateUserProfile = async (req, res) => {
   try {
-    // Use req.user.id if available, else fallback to req.body.id or req.query.id
     const userId = req.user?.id || req.body.id || req.query.id;
     if (!userId) return res.status(400).json({ message: 'User ID required' });
+
     const {
       fullName,
       dob,
       age,
       gender,
-      location,
+      street,
+      city,
+      state,
+      country,
+      postalCode,
       bio,
+      hobbies,
+      status
     } = req.body;
 
     const updatedData = {
@@ -139,8 +204,22 @@ exports.updateUserProfile = async (req, res) => {
       ...(dob && { dob }),
       ...(age && { age }),
       ...(gender && { gender }),
-      ...(location && { location }),
+      ...(street || city || state || country || postalCode
+        ? {
+          location: {
+            street: street?.trim() || '',
+            city: city?.trim() || '',
+            state: state?.trim() || '',
+            country: country?.trim() || '',
+            postalCode: postalCode?.trim() || ''
+          }
+        }
+        : {}),
       ...(bio && { bio }),
+      ...(status && { status }),
+      ...(hobbies
+        ? { hobbies: Array.isArray(hobbies) ? hobbies : hobbies.split(',').map(h => h.trim()) }
+        : {}),
       updatedAt: Date.now(),
     };
 
@@ -148,10 +227,37 @@ exports.updateUserProfile = async (req, res) => {
       userId,
       { $set: updatedData },
       { new: true }
-    ).select('-passwordHash -__v');
+    ).select('-password -__v');
 
     res.status(200).json({ message: 'Profile updated successfully', user });
   } catch (error) {
     res.status(500).json({ message: 'Error updating profile', error });
+  }
+};
+// ==========================
+// get user count and online status
+// ==========================
+exports.getUserCountAndStatus = async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    const onlineUsers = await User.countDocuments({ isOnline: true });
+    const activeUsers = await User.countDocuments({ status: 'Active' });
+
+    res.status(200).json({
+      success: true,
+      message: "User count and online status fetched successfully",
+      data: {
+        userCount,
+        onlineUsers,
+        activeUsers,
+      }
+    });
+  } catch (error) {
+    console.error("❌ getUserCountAndStatus error", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
   }
 };

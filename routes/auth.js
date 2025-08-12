@@ -1,16 +1,24 @@
-// routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
-const upload = require('../middleware/upload'); // Assuming you have a middleware for handling file uploads
-const multer = require('multer');
-const path = require('path');
-const userController = require('../controller/usersController');
+const upload = require('../middleware/upload'); // your multer middleware
+const { register, loginUser, getUserProfile, updateUserProfile,	getUserCountAndStatus } = require('../controller/usersController');
+const { auth } = require('../middleware/auth');
 
 // Routes
-router.post('/register', upload.array('photos', 5), userController.registerUser);
-router.post('/login', userController.loginUser);
-// Removed auth and upload middleware from profile routes
-router.get('/profile', userController.getUserProfile);
-router.put('/profile', userController.updateUserProfile);
+
+// Allow uploading multiple photos (max 5) during registration
+router.post('/register', upload.array('photos', 5), register);
+
+// Login route
+router.post('/login', loginUser);
+
+// Protected routes for profile
+router.get('/profile', auth, getUserProfile);
+
+// Allow multiple photo upload on profile update as well
+router.put('/profile', auth, upload.array('photos', 5), updateUserProfile);
+
+// Get user count and online status
+router.get('/user-count', auth, getUserCountAndStatus);
 
 module.exports = router;

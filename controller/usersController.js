@@ -136,14 +136,21 @@ exports.loginUser = async (req, res) => {
 
     // 6️⃣ Remove password before sending response
     const { password: _, ...userWithoutPassword } = user.toObject();
+    const profilePicUrl = user.photos?.[0]
+      ? `${req.protocol}://${req.get('host')}/uploads/${user.photos[0]}`
+      : null;
 
     // 7️⃣ Send success response
     return res.status(200).json({
       success: true,
-      message: 'Login successful',
       token,
-      user: userWithoutPassword
-    });
+      message: 'Login successful',
+      user: {
+        id: user._id,
+        name: `${user.Name.firstName} ${user.Name.lastName}`,
+        profilePic: profilePicUrl
+      }
+    }); 
 
   } catch (error) {
     console.error('❌ Login error:', error.message);

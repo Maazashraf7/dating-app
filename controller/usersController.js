@@ -1,7 +1,7 @@
 // controllers/userController.js
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const User = require('../model/User');
+const User = require('../model/users/User');
 
 // ==========================
 // Register User
@@ -70,7 +70,7 @@ exports.register = async (req, res) => {
       dob,
       age,
       gender,
-      location:{
+      location: {
         street: street?.trim() || '',
         city: city?.trim() || '',
         state: state?.trim() || '',
@@ -105,42 +105,52 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // 1️⃣ Validate input
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const user = await User.findOne({ email });
+    // 2️⃣ Check if user exists
+    const user = await User.findOne({ email }).select('+password'); // Ensure password is included
     if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
+    // 3️⃣ Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Incorrect password.' });
+      return res.status(401).json({ success: false, message: 'Incorrect password.' });
     }
 
+    // 4️⃣ Generate JWT
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    console.log("✅ Login successful:", user.fullName);
-    console.log("🔑 JWT Token:", token);
-    console.log("profilePic:", user.profilePic);
+    // 5️⃣ Log useful info for debugging
+    console.log(`✅ Login successful for: ${user.fullName}`);
+    console.log(`🔑 JWT Token generated`);
+    console.log(`🖼 Profile Pic: ${user.profilePic}`);
 
-    res.json({
+    // 6️⃣ Remove password before sending response
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    // 7️⃣ Send success response
+    return res.status(200).json({
       success: true,
-      token,
       message: 'Login successful',
-      user
+      token,
+      user: userWithoutPassword
     });
 
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error. Please try again later.' });
+    console.error('❌ Login error:', error.message);
+    return res.status(500).json({ success: false, message: 'Internal server error. Please try again later.' });
   }
 };
+
 
 // ==========================
 // Get Logged-in User Profile

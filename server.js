@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 const app = express();
 // Routes
-const authRoutes = require('./routes/auth');
+const authRoutes = require('./routes/user/auth');
 const adminRoutes = require('./routes/admin/adminRoutes');
 
 app.use(express.urlencoded({ extended: true }));

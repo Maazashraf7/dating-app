@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../middleware/upload'); // your multer middleware
-const { register, loginUser, getUserProfile, updateUserProfile,	getUserCountAndStatus } = require('../controller/usersController');
-const { auth } = require('../middleware/auth');
+const upload = require('../../middleware/upload'); // your multer middleware
+const { register, loginUser, getUserProfile, updateUserProfile,	getUserCountAndStatus } = require('../../controller/usersController');
+const { auth } = require('../../middleware/auth');
 
 // Routes
 
